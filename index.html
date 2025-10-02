@@ -187,6 +187,27 @@
         .invalid {
             border: 2px solid #ff4d4d !important;
         }
+        /* Alinhamento da caixa dentro da célula do Cube ID */
+        .cube-cell {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .cube-cell .id-text {
+            font-weight: bold;
+            text-align: left;
+            padding-left: 5px;
+        }
+        .cube-cell .nominal-input {
+            width: 25px;
+            text-align: center;
+            padding: 2px;
+            border: 1px solid #000;
+            border-radius: 0;
+            font-size: 12px;
+            margin: 0;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
@@ -222,7 +243,7 @@
         <thead>
             <tr>
                 <th>Cube ID</th>
-                <th colspan="4">Nominal: Width</th>
+                <th colspan="3">Width</th>
                 <th colspan="3">Height</th>
                 <th colspan="3">Length</th>
                 <th>
@@ -284,25 +305,27 @@
             const newRow = document.createElement('tr');
 
             newRow.innerHTML = `
-                <td class="cube-id">${cubeId}<br><small>(${strength})</small></td>
-                <!-- Width: 1st and 2nd = value, 3rd and 4th = 0.00 (editable) -->
-                <td><input class="input-small" type="text" oninput="syncFirstValue(this, 'width', '${cubeId}')"></td>
-                <td><input class="input-small" type="text" oninput="syncSecondValue(this, 'width', '${cubeId}')"></td>
+                <td class="cube-cell">
+                    <div class="id-text">${cubeId}<br><small>(${strength})</small></div>
+                    <input class="nominal-input" type="text" oninput="syncNominal(this)" placeholder="">
+                </td>
+                <!-- Width (3 caixas) -->
+                <td><input class="input-small" type="text" value=""></td>
                 <td><input class="input-small" type="text" value="0.00"></td>
                 <td><input class="input-small" type="text" value="0.00"></td>
-                <!-- Height: 1st = value, 2nd and 3rd = 0.00 (editable) -->
-                <td><input class="input-small" type="text" oninput="syncFirstValue(this, 'height', '${cubeId}')"></td>
+                <!-- Height (3 caixas) -->
+                <td><input class="input-small" type="text" value=""></td>
                 <td><input class="input-small" type="text" value="0.00"></td>
                 <td><input class="input-small" type="text" value="0.00"></td>
-                <!-- Length: 1st = value, 2nd and 3rd = 0.00 (editable) -->
-                <td><input class="input-small" type="text" oninput="syncFirstValue(this, 'length', '${cubeId}')"></td>
+                <!-- Length (3 caixas) -->
+                <td><input class="input-small" type="text" value=""></td>
                 <td><input class="input-small" type="text" value="0.00"></td>
                 <td><input class="input-small" type="text" value="0.00"></td>
                 <!-- F and P -->
                 <td><input class="checkbox" type="checkbox"></td>
                 <td><input class="checkbox" type="checkbox"></td>
                 <!-- Weight Air and Water -->
-                <td><input class="input-medium" type="text" oninput="validateWeightAir(this)" onblur="validateWeightAir(this)"></td>
+                <td><input class="input-medium" type="text" oninput="validateWeightAir(this)" onblur="validateWeightAir(this)" onkeyup="checkWeightAirComplete(this)"></td>
                 <td><input class="input-medium" type="text" oninput="validateWater(this)" onblur="validateWater(this)"></td>
                 <!-- Release? -->
                 <td><input class="checkbox" type="checkbox"></td>
@@ -326,45 +349,81 @@
             cubeIdInput.focus();
         }
 
-        function syncFirstValue(input, section, cubeId) {
+        function syncNominal(input) {
             const row = input.closest('tr');
             const value = input.value.trim();
 
             if (value === '100' || value === '150') {
-                if (section === 'width') {
-                    row.cells[2].querySelector('input').value = value;
-                    row.cells[5].querySelector('input').value = value;
-                    row.cells[8].querySelector('input').value = value;
-                } else if (section === 'height') {
-                    row.cells[1].querySelector('input').value = value;
-                    row.cells[2].querySelector('input').value = value;
-                    row.cells[8].querySelector('input').value = value;
-                } else if (section === 'length') {
-                    row.cells[1].querySelector('input').value = value;
-                    row.cells[2].querySelector('input').value = value;
-                    row.cells[5].querySelector('input').value = value;
-                }
+                row.cells[1].querySelector('input').value = value;
+                row.cells[4].querySelector('input').value = value;
+                row.cells[7].querySelector('input').value = value;
+            } else {
+                row.cells[1].querySelector('input').value = '';
+                row.cells[4].querySelector('input').value = '';
+                row.cells[7].querySelector('input').value = '';
             }
         }
 
-        function syncSecondValue(input, section, cubeId) {
-            const row = input.closest('tr');
-            const value = input.value.trim();
+        function checkWeightAirComplete(weightAirInput) {
+            const row = weightAirInput.closest('tr');
+            const nominalInput = row.cells[0].querySelector('.nominal-input');
+            const nominalValue = nominalInput.value.trim();
+            const weightAir = weightAirInput.value.trim();
 
-            if (value === '100' || value === '150') {
-                if (section === 'width') {
-                    row.cells[1].querySelector('input').value = value;
-                    row.cells[5].querySelector('input').value = value;
-                    row.cells[8].querySelector('input').value = value;
+            // Se não for 100 ou 150, não faz nada
+            if (nominalValue !== '100' && nominalValue !== '150') {
+                return;
+            }
+
+            // Só processa se tiver exatamente 4 dígitos numéricos
+            if (weightAir.length !== 4 || isNaN(weightAir)) {
+                return; // Não faz nada se incompleto ou inválido
+            }
+
+            const num = parseInt(weightAir);
+
+            if (nominalValue === '100') {
+                if (num < 2300) {
+                    // Aplica 98
+                    row.cells[1].querySelector('input').value = '98';
+                    row.cells[2].querySelector('input').value = '98';
+                    row.cells[3].querySelector('input').value = '98';
+                } else if (num > 2450) {
+                    // Aplica 102
+                    row.cells[1].querySelector('input').value = '102';
+                    row.cells[2].querySelector('input').value = '102';
+                    row.cells[3].querySelector('input').value = '102';
+                } else {
+                    // Está na faixa normal → volta ao valor original
+                    row.cells[1].querySelector('input').value = '100';
+                    row.cells[2].querySelector('input').value = '0.00';
+                    row.cells[3].querySelector('input').value = '0.00';
+                }
+            } else if (nominalValue === '150') {
+                if (num < 7650) {
+                    // Aplica 148
+                    row.cells[1].querySelector('input').value = '148';
+                    row.cells[2].querySelector('input').value = '148';
+                    row.cells[3].querySelector('input').value = '148';
+                } else if (num > 8250) {
+                    // Aplica 152
+                    row.cells[1].querySelector('input').value = '152';
+                    row.cells[2].querySelector('input').value = '152';
+                    row.cells[3].querySelector('input').value = '152';
+                } else {
+                    // Está na faixa normal → volta ao valor original
+                    row.cells[1].querySelector('input').value = '150';
+                    row.cells[2].querySelector('input').value = '0.00';
+                    row.cells[3].querySelector('input').value = '0.00';
                 }
             }
         }
 
         function applyToRow(row, value) {
+            row.cells[0].querySelector('.nominal-input').value = value;
             row.cells[1].querySelector('input').value = value;
-            row.cells[2].querySelector('input').value = value;
-            row.cells[5].querySelector('input').value = value;
-            row.cells[8].querySelector('input').value = value;
+            row.cells[4].querySelector('input').value = value;
+            row.cells[7].querySelector('input').value = value;
         }
 
         function applyGlobalNominal() {
@@ -374,7 +433,7 @@
         function toggleAll(column) {
             const isChecked = document.getElementById(`selectAll${column}`).checked;
             const rows = document.querySelectorAll('#tableBody tr');
-            const columnIndex = column === 'F' ? 11 : 12;
+            const columnIndex = column === 'F' ? 10 : 11;
 
             rows.forEach(row => {
                 const checkbox = row.cells[columnIndex].querySelector('input[type="checkbox"]');
@@ -386,15 +445,14 @@
 
         // Validação para Weight Air: exatamente 4 dígitos inteiros
         function validateWeightAir(input) {
-            let value = input.value.replace(/[^0-9]/g, ''); // Remove tudo que não for número
+            let value = input.value.replace(/[^0-9]/g, '');
 
             if (value.length > 4) {
-                value = value.slice(0, 4); // Limita a 4 dígitos
+                value = value.slice(0, 4);
             }
 
             input.value = value;
 
-            // Adiciona classe "invalid" se não tiver exatamente 4 dígitos
             if (value.length !== 4) {
                 input.classList.add('invalid');
             } else {
@@ -402,29 +460,17 @@
             }
         }
 
-        // Validação para Water: 3 ou 4 dígitos, com ou sem ponto decimal
+        // Validação para Water: exatamente 4 dígitos (sem ponto)
         function validateWater(input) {
-            let value = input.value;
+            let value = input.value.replace(/[^0-9]/g, '');
 
-            // Permite apenas números e um único ponto
-            value = value.replace(/[^\d.]/g, ''); // Remove tudo que não for número ou ponto
-            value = value.replace(/\.{2,}/g, '.'); // Remove múltiplos pontos
-
-            // Se começar com ponto, adiciona zero
-            if (value.startsWith('.')) {
-                value = '0' + value;
-            }
-
-            // Se terminar com ponto, remove
-            if (value.endsWith('.')) {
-                value = value.slice(0, -1);
+            if (value.length > 4) {
+                value = value.slice(0, 4);
             }
 
             input.value = value;
 
-            // Valida se tem pelo menos 3 dígitos (ignorando o ponto)
-            const digitsOnly = value.replace('.', '');
-            if (digitsOnly.length < 3) {
+            if (value.length !== 4) {
                 input.classList.add('invalid');
             } else {
                 input.classList.remove('invalid');
@@ -458,33 +504,30 @@
             let hasInvalid = false;
 
             rows.forEach(row => {
-                const cubeId = row.cells[0].innerText.split('\n')[0];
+                const cubeId = row.cells[0].querySelector('.id-text').innerText.split('\n')[0];
                 const width = [
                     row.cells[1].querySelector('input').value,
                     row.cells[2].querySelector('input').value,
-                    row.cells[3].querySelector('input').value,
-                    row.cells[4].querySelector('input').value
+                    row.cells[3].querySelector('input').value
                 ];
                 const height = [
+                    row.cells[4].querySelector('input').value,
                     row.cells[5].querySelector('input').value,
-                    row.cells[6].querySelector('input').value,
-                    row.cells[7].querySelector('input').value
+                    row.cells[6].querySelector('input').value
                 ];
                 const length = [
+                    row.cells[7].querySelector('input').value,
                     row.cells[8].querySelector('input').value,
-                    row.cells[9].querySelector('input').value,
-                    row.cells[10].querySelector('input').value
+                    row.cells[9].querySelector('input').value
                 ];
-                const f = row.cells[11].querySelector('input').checked ? 'Yes' : 'No';
-                const p = row.cells[12].querySelector('input').checked ? 'Yes' : 'No';
+                const f = row.cells[10].querySelector('input').checked ? 'Yes' : 'No';
+                const p = row.cells[11].querySelector('input').checked ? 'Yes' : 'No';
 
-                // Valida Weight Air e Water
-                const weightAirInput = row.cells[13].querySelector('input');
-                const waterInput = row.cells[14].querySelector('input');
+                const weightAirInput = row.cells[12].querySelector('input');
+                const waterInput = row.cells[13].querySelector('input');
                 const weightAir = weightAirInput.value;
                 const water = waterInput.value;
 
-                // Validar Weight Air: exatamente 4 dígitos
                 if (weightAir.length !== 4 || isNaN(weightAir)) {
                     weightAirInput.classList.add('invalid');
                     hasInvalid = true;
@@ -492,18 +535,16 @@
                     weightAirInput.classList.remove('invalid');
                 }
 
-                // Validar Water: pelo menos 3 dígitos (com ou sem ponto)
-                const waterDigits = water.replace('.', '');
-                if (waterDigits.length < 3 || water === '') {
+                if (water.length !== 4 || isNaN(water)) {
                     waterInput.classList.add('invalid');
                     hasInvalid = true;
                 } else {
                     waterInput.classList.remove('invalid');
                 }
 
-                const release = row.cells[15].querySelector('input').checked ? 'Yes' : 'No';
-                const maxLoad = row.cells[16].querySelector('input').value;
-                const tested = row.cells[17].querySelector('input').checked ? 'Yes' : 'No';
+                const release = row.cells[14].querySelector('input').checked ? 'Yes' : 'No';
+                const maxLoad = row.cells[15].querySelector('input').value;
+                const tested = row.cells[16].querySelector('input').checked ? 'Yes' : 'No';
 
                 data.push({
                     cubeId,
@@ -521,7 +562,7 @@
             });
 
             if (hasInvalid) {
-                alert('⚠️ Some Weight Air or Water fields are invalid. Weight Air must be exactly 4 digits. Water must have at least 3 digits (with or without decimal point).');
+                alert('⚠️ Some Weight Air or Water fields are invalid. Both must be exactly 4 digits.');
                 return;
             }
 
